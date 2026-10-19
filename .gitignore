@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# large downloaded real-network edgelists (re-fetched by src/real_networks.py)
+data/real/*.txt
+data/real/*.gz
+
+# generated outputs (reproducible via src/run_grid.py and src/analyze.py)
+results/*.csv
+results/*.log
+figures/*.png
