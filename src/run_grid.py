@@ -17,7 +17,7 @@ from experiment import run_all_policies, summarize
 SYNTH_SIZES = [300, 600]
 SYNTH_SEEDS = [0, 1, 2]
 K_VALUES = (10, 25, 50)
-TAU_VALUES = (0.05, 0.1, 0.2, 0.3)
+TAU_VALUES = (0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9)
 BETWEENNESS_APPROX_K = 60  # sampled betweenness for speed on larger graphs
 
 
