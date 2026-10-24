@@ -17,9 +17,11 @@ centralities = ["degree", "betweenness"]
 
 synth = df[df["family"].isin(families)]
 
-# Collapse seeds: mean AND std per (family, centrality, policy, param), so
-# we can see when a result (e.g. gain_retained > 1) is noise from a small
-# R_static - R_adaptive denominator rather than a real effect.
+# Collapse instances: mean AND std per (family, centrality, policy, param).
+# Each point here averages 6 instances (2 network sizes x 3 seeds each),
+# NOT 3 seeds - the groupby below has no "N0" key, so it pools both sizes.
+# The std lets us see when a result (e.g. gain_retained > 1) is noise from
+# a small R_static - R_adaptive denominator rather than a real effect.
 agg = (
     synth.groupby(["family", "centrality", "policy", "param"], dropna=False)
     .agg(R=("R", "mean"), R_std=("R", "std"),
@@ -41,16 +43,19 @@ for fam in families:
             print(f"{fam}/{cfn}: R_static={rs[0]:.4f} R_adaptive={ra[0]:.4f} denom={denom:.4f}{flag}")
 
 # --- Pareto plots: fixed_k, T1, T2, and the random-recompute control.
-# Shaded bands show +/-1 std across seeds (gain_std), since the paper's own
-# noise caveat (only 3 seeds) should be visible in the figure, not just
-# stated in text. X-axis is shared within each row (degree / betweenness)
-# so panels are visually comparable, even though degree and betweenness
-# need very different cost ranges across the two rows. ---
+# Shaded bands show +/-1 std across the 6 instances per point (2 network
+# sizes x 3 seeds - NOT 3 seeds; cost_fraction counts recomputations, not
+# time, so there is no reason for degree and betweenness to need different
+# x-ranges - each panel instead uses its own data's x-range, since forcing
+# a shared range wastes space whenever one policy on one topology happens
+# to run much longer than the rest (e.g. WS/degree's high-tau T2 points).
+# The y-axis is clipped to [-0.2, 1.3]: a few (policy, tau) points on
+# WS/degree have such high seed-to-seed variance (T1 at tau=0.3 reaches a
+# mean of 1.26 with std 0.86) that an unclipped shared y-axis would
+# compress every other panel into a thin strip near 0-1; the caption notes
+# the clip and where it truncates a band. ---
+Y_LO, Y_HI = -0.2, 1.3
 fig, axes = plt.subplots(len(centralities), len(families), figsize=(18, 8), sharey=True)
-row_xmax = {}
-for i, cfn in enumerate(centralities):
-    row_xmax[i] = synth[synth["centrality"] == cfn]["cost_fraction"].max() * 1.03
-
 for i, cfn in enumerate(centralities):
     for j, fam in enumerate(families):
         ax = axes[i][j]
@@ -69,19 +74,14 @@ for i, cfn in enumerate(centralities):
                              pts["gain_retained"] + std, color=color, alpha=0.12)
         ax.axhline(0, color="gray", linestyle=":", linewidth=0.8)
         ax.axhline(1, color="gray", linestyle=":", linewidth=0.8)
-        ax.set_xlim(0, row_xmax[i])
+        ax.set_ylim(Y_LO, Y_HI)
         ax.set_title(f"{fam} / {cfn}", fontsize=9)
         ax.set_xlabel("cost fraction (recomputations / N)")
         if j == 0:
             ax.set_ylabel("gain retained")
 handles, labels = axes[0][0].get_legend_handles_labels()
 fig.legend(handles, labels, loc="upper center", ncol=4)
-fig.suptitle(
-    "gain_retained vs cost_fraction (recomputations / N); shaded bands are "
-    "±1 std across 3 seeds; x-axis shared within each row",
-    fontsize=8, y=0.965,
-)
-fig.tight_layout(rect=[0, 0, 1, 0.91])
+fig.tight_layout(rect=[0, 0, 1, 0.95])
 fig.savefig("../figures/pareto_by_topology.png", dpi=150)
 print("\nSaved ../figures/pareto_by_topology.png")
 
@@ -188,6 +188,55 @@ for fam in families:
               f"T2 beats random in {sum(np.interp(c, t2.cost_fraction, t2.gain_retained) >= np.interp(c, rnd.cost_fraction, rnd.gain_retained) for c in test_costs)}/5 sampled points")
 if random_total:
     print(f"\nOverall: T2 beats random_control in {t2_beats_random}/{random_total} matched-cost samples.")
+
+# --- Paired per-instance comparison: since every policy runs on the SAME
+# six network instances (2 sizes x 3 seeds) per family, a paired
+# T2-minus-other difference per instance is a much more powerful test than
+# comparing independently-aggregated mean curves - it controls for
+# instance-to-instance variance instead of treating seed spread as noise
+# on each side separately. Report mean +/- standard error across the 6
+# paired differences. ---
+def paired_diff(policy_a, policy_b, fam, cfn, n_points=5):
+    sub = synth[(synth.family == fam) & (synth.centrality == cfn)]
+    instances = sub[["N0", "seed"]].drop_duplicates()
+    diffs = []
+    for _, inst in instances.iterrows():
+        inst_df = sub[(sub.N0 == inst.N0) & (sub.seed == inst.seed)]
+        a = inst_df[inst_df.policy == policy_a].sort_values("cost_fraction")
+        b = inst_df[inst_df.policy == policy_b].sort_values("cost_fraction")
+        if len(a) < 2 or len(b) < 2:
+            continue
+        lo = max(a.cost_fraction.min(), b.cost_fraction.min())
+        hi = min(a.cost_fraction.max(), b.cost_fraction.max())
+        if lo > hi:
+            continue
+        for c in np.linspace(lo, hi, n_points):
+            ag = np.interp(c, a.cost_fraction, a.gain_retained)
+            bg = np.interp(c, b.cost_fraction, b.gain_retained)
+            diffs.append(ag - bg)
+    if not diffs:
+        return None, None, 0
+    diffs = np.array(diffs)
+    return diffs.mean(), diffs.std(ddof=1) / np.sqrt(len(diffs)) if len(diffs) > 1 else 0.0, len(diffs)
+
+
+print("\n=== Paired per-instance comparison: T2 minus random_control (mean +/- SE) ===")
+for fam in families:
+    for cfn in centralities:
+        mean, se, n = paired_diff("trigger_T2_topdrift", "random_control", fam, cfn)
+        if mean is None:
+            continue
+        sig = "significant" if abs(mean) > 2 * se else "within ~2 SE of zero"
+        print(f"{fam}/{cfn}: T2 - random = {mean:+.3f} +/- {se:.3f} (n={n} paired points, {sig})")
+
+print("\n=== Paired per-instance comparison: T2 minus fixed_k (mean +/- SE) ===")
+for fam in families:
+    for cfn in centralities:
+        mean, se, n = paired_diff("trigger_T2_topdrift", "fixed_k", fam, cfn)
+        if mean is None:
+            continue
+        sig = "significant" if abs(mean) > 2 * se else "within ~2 SE of zero"
+        print(f"{fam}/{cfn}: T2 - fixed_k = {mean:+.3f} +/- {se:.3f} (n={n} paired points, {sig})")
 
 # Real networks table
 real = df[df["family"] == "REAL"]
