@@ -40,8 +40,17 @@ for fam in families:
             flag = "  <-- SMALL, treat gain_retained here with caution" if denom < 0.015 else ""
             print(f"{fam}/{cfn}: R_static={rs[0]:.4f} R_adaptive={ra[0]:.4f} denom={denom:.4f}{flag}")
 
-# --- Pareto plots: fixed_k, T1, T2, and the random-recompute control ---
+# --- Pareto plots: fixed_k, T1, T2, and the random-recompute control.
+# Shaded bands show +/-1 std across seeds (gain_std), since the paper's own
+# noise caveat (only 3 seeds) should be visible in the figure, not just
+# stated in text. X-axis is shared within each row (degree / betweenness)
+# so panels are visually comparable, even though degree and betweenness
+# need very different cost ranges across the two rows. ---
 fig, axes = plt.subplots(len(centralities), len(families), figsize=(18, 8), sharey=True)
+row_xmax = {}
+for i, cfn in enumerate(centralities):
+    row_xmax[i] = synth[synth["centrality"] == cfn]["cost_fraction"].max() * 1.03
+
 for i, cfn in enumerate(centralities):
     for j, fam in enumerate(families):
         ax = axes[i][j]
@@ -55,15 +64,24 @@ for i, cfn in enumerate(centralities):
             pts = sub[sub["policy"] == policy].sort_values("cost_fraction")
             ax.plot(pts["cost_fraction"], pts["gain_retained"], marker=marker,
                      color=color, linestyle=ls, label=policy, linewidth=1)
+            std = pts["gain_std"].fillna(0)
+            ax.fill_between(pts["cost_fraction"], pts["gain_retained"] - std,
+                             pts["gain_retained"] + std, color=color, alpha=0.12)
         ax.axhline(0, color="gray", linestyle=":", linewidth=0.8)
         ax.axhline(1, color="gray", linestyle=":", linewidth=0.8)
+        ax.set_xlim(0, row_xmax[i])
         ax.set_title(f"{fam} / {cfn}", fontsize=9)
         ax.set_xlabel("cost fraction (recomputations / N)")
         if j == 0:
             ax.set_ylabel("gain retained")
 handles, labels = axes[0][0].get_legend_handles_labels()
 fig.legend(handles, labels, loc="upper center", ncol=4)
-fig.tight_layout(rect=[0, 0, 1, 0.93])
+fig.suptitle(
+    "gain_retained vs cost_fraction (recomputations / N); shaded bands are "
+    "±1 std across 3 seeds; x-axis shared within each row",
+    fontsize=8, y=0.965,
+)
+fig.tight_layout(rect=[0, 0, 1, 0.91])
 fig.savefig("../figures/pareto_by_topology.png", dpi=150)
 print("\nSaved ../figures/pareto_by_topology.png")
 
