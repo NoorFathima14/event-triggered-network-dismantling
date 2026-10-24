@@ -22,13 +22,17 @@ def _rank(scores):
 
 
 def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
-               top_m=20, stop_frac=0.01, approx_betweenness_k=None):
+               top_m=20, stop_frac=0.01, approx_betweenness_k=None,
+               random_p=None, rng=None):
     """
     Remove nodes from G (a copy is made) under one of:
       policy='static'   -> rank once, remove in that order
       policy='adaptive' -> recompute ranking after every removal
       policy='fixed_k'  -> recompute every k removals
       policy='trigger'  -> recompute when `trigger` fires (T1 or T2)
+      policy='random'   -> recompute with per-step probability random_p
+                           (a matched-cost control: is a real trigger any
+                           smarter than recomputing at random?)
 
     Returns dict with:
       gcc_curve: list of largest-component sizes (fraction of N0) after each removal
@@ -38,7 +42,8 @@ def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
     G = G.copy()
     N0 = G.number_of_nodes()
     E0 = G.number_of_edges()
-    gcc_curve = [1.0]
+    initial_largest = max((len(c) for c in nx.connected_components(G)), default=0)
+    gcc_curve = [initial_largest / N0]
     n_recomputations = 0
     removed_order = []
 
@@ -50,11 +55,14 @@ def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
         else:
             raise ValueError(centrality_fn)
 
+    def degree_top(H):
+        return set(n for n, _ in sorted(H.degree(), key=lambda x: x[1], reverse=True)[:top_m])
+
     scores = compute_scores(G)
     n_recomputations += 1
     ranking = _rank(scores)
     edges_at_last_recompute = G.number_of_edges()
-    stored_top_m = set(ranking[:top_m])
+    stored_degree_top = degree_top(G)
 
     removed_since_recompute = 0
     stop_size = stop_frac * N0
@@ -92,10 +100,12 @@ def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
                 G=G,
                 E0=edges_at_last_recompute,
                 removed_since_recompute=removed_since_recompute,
-                stored_top_m=stored_top_m,
+                stored_degree_top=stored_degree_top,
                 tau=tau,
                 top_m=top_m,
             )
+        elif policy == "random":
+            recompute = rng.random() < random_p
         else:
             raise ValueError(policy)
 
@@ -104,7 +114,7 @@ def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
             n_recomputations += 1
             ranking = _rank(scores)
             edges_at_last_recompute = G.number_of_edges()
-            stored_top_m = set(ranking[:top_m])
+            stored_degree_top = degree_top(G)
             removed_since_recompute = 0
 
     return {
@@ -125,16 +135,26 @@ def trigger_edge_loss(G, E0, tau, **kwargs):
     return frac_lost > tau
 
 
-def trigger_topset_drift(G, stored_top_m, tau, top_m, **kwargs):
-    """T2: recompute when the top-m nodes of the stored ranking differ from
-    the top-m nodes by *current* degree (cheap to maintain) by more than tau,
-    i.e. when their Jaccard overlap falls below (1 - tau)."""
+def trigger_topset_drift(G, stored_degree_top, tau, top_m, **kwargs):
+    """T2: recompute when the top-m nodes by degree *at the last
+    recomputation* differ from the top-m nodes by *current* degree by more
+    than tau (Jaccard overlap below 1 - tau).
+
+    This compares the cheap degree-based proxy signal against itself over
+    time, not against the (possibly different) attack ranking. Comparing a
+    betweenness-ranked stored top-m against a degree-ranked current top-m
+    would conflate "the ranking has drifted" with "degree and betweenness
+    rank nodes differently to begin with" - the two top-m sets can already
+    differ substantially at the moment of recomputation (fraction of
+    non-overlap measured at 0.4-0.7 on our test networks), which forces the
+    trigger toward near-every-step recomputation at any reasonably small
+    tau regardless of whether the network has actually changed."""
     if G.number_of_nodes() == 0:
         return True
     current_degree_top = set(
         n for n, _ in sorted(G.degree(), key=lambda x: x[1], reverse=True)[:top_m]
     )
-    stored_alive = {n for n in stored_top_m if n in G}
+    stored_alive = {n for n in stored_degree_top if n in G}
     union = stored_alive | current_degree_top
     if not union:
         return False

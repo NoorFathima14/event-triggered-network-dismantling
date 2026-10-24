@@ -1,11 +1,21 @@
 """Run all dismantling policies on a graph and collect comparable metrics."""
+import random
+
 from strategies import run_policy, trigger_edge_loss, trigger_topset_drift, r_measure
+
+RANDOM_P_VALUES = (0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5)
 
 
 def run_all_policies(G, centrality_fn, k_values=(10, 25, 50), tau_values=(0.05, 0.1, 0.2, 0.3),
-                      top_m=20, stop_frac=0.01, approx_betweenness_k=None):
-    """Run static, adaptive, fixed-k (several k) and trigger T1/T2 (several
-    tau) policies on G. Returns a list of result dicts, one per policy/param."""
+                      top_m=20, stop_frac=0.01, approx_betweenness_k=None,
+                      random_p_values=RANDOM_P_VALUES, random_seed=0):
+    """Run static, adaptive, fixed-k (several k), trigger T1/T2 (several
+    tau), and a random-recompute control (several per-step probabilities)
+    on G. The random control answers a question the trigger results alone
+    cannot: is a trigger's cost-quality tradeoff actually better than
+    recomputing at random with a matched average cost, or does any
+    schedule with a similar number of recomputations do about as well?
+    Returns a list of result dicts, one per policy/param."""
     results = []
 
     common = dict(centrality_fn=centrality_fn, stop_frac=stop_frac,
@@ -33,6 +43,12 @@ def run_all_policies(G, centrality_fn, k_values=(10, 25, 50), tau_values=(0.05, 
         res = run_policy(G, policy="trigger", trigger=trigger_topset_drift, tau=tau,
                           top_m=top_m, **common)
         res.update(policy_name="trigger_T2_topdrift", param=tau)
+        results.append(res)
+
+    for p in random_p_values:
+        res = run_policy(G, policy="random", random_p=p, rng=random.Random(random_seed),
+                          **common)
+        res.update(policy_name="random_control", param=p)
         results.append(res)
 
     return results

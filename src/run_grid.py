@@ -16,8 +16,8 @@ from experiment import run_all_policies, summarize
 
 SYNTH_SIZES = [300, 600]
 SYNTH_SEEDS = [0, 1, 2]
-K_VALUES = (10, 25, 50)
-TAU_VALUES = (0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9)
+K_VALUES = (2, 3, 5, 10, 25, 50, 100)
+TAU_VALUES = (0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9, 0.95, 0.99)
 BETWEENNESS_APPROX_K = 60  # sampled betweenness for speed on larger graphs
 
 
@@ -53,6 +53,7 @@ def main():
                 G, centrality_fn=centrality_fn,
                 k_values=K_VALUES, tau_values=TAU_VALUES,
                 approx_betweenness_k=approx_k,
+                random_seed=seed if seed is not None else 0,
             )
             results = summarize(results)
             for r in results:

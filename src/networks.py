@@ -28,11 +28,3 @@ GENERATORS = {
     "WS": make_ws,
     "SBM": make_sbm,
 }
-
-
-def largest_cc_fraction(G):
-    """Size of the largest connected component as a fraction of the original node count."""
-    if G.number_of_nodes() == 0:
-        return 0.0
-    largest = max((len(c) for c in nx.connected_components(G)), default=0)
-    return largest
