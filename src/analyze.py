@@ -67,23 +67,25 @@ fig.tight_layout(rect=[0, 0, 1, 0.93])
 fig.savefig("../figures/pareto_by_topology.png", dpi=150)
 print("\nSaved ../figures/pareto_by_topology.png")
 
-# --- Best tau: smallest tau that reaches gain_retained >= 0.95, not argmax ---
-# (argmax picks up noise - e.g. a gain_retained of 1.26 from 3 seeds on a
-# network where R_static - R_adaptive is tiny - rather than the policy's
-# real behavior.)
+# --- Best tau: the CHEAPEST tau that still reaches gain_retained >= 0.95,
+# not argmax (argmax picks up noise - e.g. a gain_retained of 1.26 from 3
+# seeds on a network where R_static - R_adaptive is tiny) and not "smallest
+# tau reaching threshold" (smaller tau fires more often, so that previous
+# version of this selection picked the MOST expensive qualifying point,
+# exactly backwards from "the most efficient trigger setting").
 GAIN_THRESHOLD = 0.95
 summary_rows = []
 for fam in families:
     for cfn in centralities:
         sub = agg[(agg["family"] == fam) & (agg["centrality"] == cfn)]
         for policy in ["trigger_T1_edgeloss", "trigger_T2_topdrift"]:
-            pts = sub[sub["policy"] == policy].sort_values("param")
+            pts = sub[sub["policy"] == policy].sort_values("cost_fraction")
             if pts.empty:
                 continue
             reaching = pts[pts["gain_retained"] >= GAIN_THRESHOLD]
             if not reaching.empty:
-                best = reaching.iloc[0]  # smallest tau reaching threshold
-                note = f"first tau reaching gain>={GAIN_THRESHOLD}"
+                best = reaching.iloc[0]  # cheapest point reaching threshold
+                note = f"cheapest tau reaching gain>={GAIN_THRESHOLD}"
             else:
                 best = pts.loc[pts["gain_retained"].idxmax()]
                 note = "never reaches threshold; reporting max achieved"
@@ -102,6 +104,7 @@ print(summary_df.to_string(index=False))
 # extrapolated/clipped to its cheapest point. ---
 print("\n=== Equal-budget comparison (T2 and random_control vs fixed_k) ===")
 in_range_n, total_n, t2_wins_in_range = 0, 0, 0
+in_range_by_metric = {"degree": [0, 0], "betweenness": [0, 0]}  # [wins, total]
 random_beats_fixed_k = 0
 for fam in families:
     for cfn in centralities:
@@ -119,8 +122,10 @@ for fam in families:
             tag = "IN-RANGE" if in_range else "extrapolated"
             if in_range:
                 in_range_n += 1
+                in_range_by_metric[cfn][1] += 1
                 if t2_gain >= row.gain_retained:
                     t2_wins_in_range += 1
+                    in_range_by_metric[cfn][0] += 1
             rnd_gain = None
             if len(rnd) >= 2:
                 xr = np.clip(row.cost_fraction, rnd.cost_fraction.min(), rnd.cost_fraction.max())
@@ -134,6 +139,9 @@ for fam in families:
 print(f"\n{in_range_n}/{total_n} comparisons are genuinely in T2's tested cost range "
       f"({total_n - in_range_n} are extrapolated to T2's cheapest tested point).")
 print(f"Of the in-range comparisons, T2 beats fixed_k in {t2_wins_in_range}/{in_range_n}.")
+for cfn in centralities:
+    w, t = in_range_by_metric[cfn]
+    print(f"  split by metric - {cfn}: T2 beats fixed_k in {w}/{t}")
 
 # --- T2 vs random_control at matched cost: is T2 actually smarter than
 # recomputing at random with the same average cost? ---
