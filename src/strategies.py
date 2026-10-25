@@ -52,7 +52,10 @@ def run_policy(G, centrality_fn, policy, k=None, trigger=None, tau=None,
                     both at recomputation refresh and at every check)
       work_units: total "work" across all recomputes - sources_used * current_edges
                   for betweenness (sources_used = approx_betweenness_k or current
-                  node count for exact), current node count for degree
+                  node count for exact), current node count for degree. This
+                  counts only compute_scores calls, NOT trigger/probe checks -
+                  for T3, use total_time = score_time + trigger_time instead,
+                  since work_units alone understates T3's real cost.
     """
     G = G.copy()
     N0 = G.number_of_nodes()

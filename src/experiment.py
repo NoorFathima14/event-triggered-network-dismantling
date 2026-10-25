@@ -5,7 +5,12 @@ from strategies import (run_policy, trigger_edge_loss, trigger_topset_drift,
                          trigger_sampled_probe, r_measure)
 
 RANDOM_P_VALUES = (0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.5)
-T3_TAU_VALUES = (0.01, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
+# With top_m=20, a single node swapping in/out of the top-20 changes the
+# Jaccard overlap by about 1/21 =~ 0.095 - any tau below that fires on any
+# change at all, so e.g. tau=0.01 and tau=0.05 are not distinct settings
+# (confirmed empirically: identical n_recomputations in 60/60 runs). The
+# grid below has no value below that granularity.
+T3_TAU_VALUES = (0.05, 0.1, 0.2, 0.3, 0.4, 0.5)
 T3_PROBE_K = 10  # number of fixed probe source nodes
 
 
