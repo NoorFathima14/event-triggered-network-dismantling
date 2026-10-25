@@ -1,0 +1,25 @@
+family,centrality,policy,best_tau,gain_retained,cost_fraction,note
+ER,degree,trigger_T1_edgeloss,0.05,0.9972886849167087,0.10277777777777773,cheapest tau reaching gain>=0.95
+ER,degree,trigger_T2_topdrift,0.7,0.9861194688791205,0.03611111111111109,cheapest tau reaching gain>=0.95
+ER,degree,trigger_T3_probedrift,0.2,0.9556483154798171,0.10722222222222218,cheapest tau reaching gain>=0.95
+ER,betweenness,trigger_T1_edgeloss,0.05,0.6711659130354279,0.09499999999999996,never reaches threshold; reporting max achieved
+ER,betweenness,trigger_T2_topdrift,0.05,0.8120536278613107,0.285,never reaches threshold; reporting max achieved
+ER,betweenness,trigger_T3_probedrift,0.05,0.9437696922127875,0.23805555555555555,never reaches threshold; reporting max achieved
+BA,degree,trigger_T1_edgeloss,0.05,0.9573039670250703,0.09444444444444443,cheapest tau reaching gain>=0.95
+BA,degree,trigger_T2_topdrift,0.5,1.0150482687519031,0.03305555555555551,cheapest tau reaching gain>=0.95
+BA,degree,trigger_T3_probedrift,0.1,0.9442506965905005,0.12138888888888887,never reaches threshold; reporting max achieved
+BA,betweenness,trigger_T1_edgeloss,0.05,0.6821462167573413,0.0869444444444444,never reaches threshold; reporting max achieved
+BA,betweenness,trigger_T2_topdrift,0.05,0.7970528504597709,0.20166666666666663,never reaches threshold; reporting max achieved
+BA,betweenness,trigger_T3_probedrift,0.05,0.9599465803257067,0.15499999999999997,cheapest tau reaching gain>=0.95
+WS,degree,trigger_T1_edgeloss,0.3,1.2555619767279202,0.022777777777777748,cheapest tau reaching gain>=0.95
+WS,degree,trigger_T2_topdrift,0.2,1.0990866186522268,0.20999999999999996,cheapest tau reaching gain>=0.95
+WS,degree,trigger_T3_probedrift,0.3,0.5915669324408445,0.07722222222222218,never reaches threshold; reporting max achieved
+WS,betweenness,trigger_T1_edgeloss,0.05,0.5139550073452831,0.09749999999999998,never reaches threshold; reporting max achieved
+WS,betweenness,trigger_T2_topdrift,0.05,0.6723706337066576,0.16777777777777778,never reaches threshold; reporting max achieved
+WS,betweenness,trigger_T3_probedrift,0.05,0.9699911047715348,0.21833333333333335,cheapest tau reaching gain>=0.95
+SBM,degree,trigger_T1_edgeloss,0.05,0.9364121378605254,0.08472222222222218,never reaches threshold; reporting max achieved
+SBM,degree,trigger_T2_topdrift,0.2,0.9672342850939613,0.10027777777777774,cheapest tau reaching gain>=0.95
+SBM,degree,trigger_T3_probedrift,0.2,0.9611450704272418,0.06277777777777775,cheapest tau reaching gain>=0.95
+SBM,betweenness,trigger_T1_edgeloss,0.05,0.5876227310080214,0.06666666666666664,never reaches threshold; reporting max achieved
+SBM,betweenness,trigger_T2_topdrift,0.05,0.8120877045600273,0.17083333333333328,never reaches threshold; reporting max achieved
+SBM,betweenness,trigger_T3_probedrift,0.05,0.9420757366067681,0.14555555555555552,never reaches threshold; reporting max achieved

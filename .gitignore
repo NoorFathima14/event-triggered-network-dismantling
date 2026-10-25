@@ -8,7 +8,9 @@ __pycache__/
 data/real/*.txt
 data/real/*.gz
 
-# generated outputs (reproducible via src/run_grid.py and src/analyze.py)
-results/*.csv
-results/*.log
-figures/*.png
+# run logs only - the CSVs and PNGs in results/ and figures/ ARE committed:
+# app.py (the Streamlit dashboard) reads them directly from disk, and a
+# fresh clone (e.g. Streamlit Community Cloud's deploy) has no way to
+# regenerate them (the full grid takes ~20 minutes to run).
+results/run_grid.log
+results/analyze.log
