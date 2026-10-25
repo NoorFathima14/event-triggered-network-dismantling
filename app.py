@@ -166,11 +166,43 @@ Four families, at N = 300 and N = 600 nodes, 3 random seeds each
         with col:
             G = example_network(family)
             fig, ax = plt.subplots(figsize=(3, 3))
-            pos = nx.spring_layout(G, seed=0)
-            nx.draw(G, pos, ax=ax, node_size=30, width=0.5, node_color="tab:blue")
+            if family == "WS":
+                # spring_layout (force-directed) does not preserve the ring
+                # shape WS is built from - circular_layout shows it directly.
+                pos = nx.circular_layout(G)
+                nx.draw(G, pos, ax=ax, node_size=30, width=0.5, node_color="tab:blue")
+            elif family == "SBM":
+                # Color by block so the modular structure is visible even
+                # when, as here, a few communities end up weakly connected
+                # or disconnected from each other at this small N - that is
+                # not a rendering bug, it reflects the real experiment's SBM
+                # instances, which are intentionally sparse (average degree
+                # below 2, near the percolation threshold - see Limitations)
+                # and are not fully connected either (Section 4).
+                partition = G.graph["partition"]
+                block_of = {}
+                for b, members in enumerate(partition):
+                    for node in members:
+                        block_of[node] = b
+                colors = [block_of[n] for n in G.nodes()]
+                pos = nx.spring_layout(G, seed=0)
+                nx.draw(G, pos, ax=ax, node_size=30, width=0.5,
+                        node_color=colors, cmap="tab10")
+            else:
+                pos = nx.spring_layout(G, seed=0)
+                nx.draw(G, pos, ax=ax, node_size=30, width=0.5, node_color="tab:blue")
             ax.set_title(family, fontsize=10)
             st.pyplot(fig)
             plt.close(fig)
+    st.caption(
+        "WS is drawn with a circular layout to show its ring-lattice origin "
+        "(force-directed layout hides it). SBM is colored by community "
+        "block; it can look sparsely connected or even split into separate "
+        "components at this small illustrative N — the real experiment's "
+        "SBM instances are intentionally this sparse (avg degree < 2, near "
+        "the percolation threshold) and are not fully connected either, as "
+        "discussed in the paper's Limitations."
+    )
 
     st.subheader("Real networks")
     st.markdown(
