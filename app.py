@@ -58,7 +58,11 @@ def example_network(family, n=40, seed=0):
     if family == "SBM":
         sizes = [n // 4] * 4
         sizes[-1] += n - sum(sizes)
-        p_in, p_out = 0.15, 0.01
+        # p_in here (0.5) is much higher than the real experiment's 0.02 -
+        # chosen only so the N=40 illustration looks visually clustered;
+        # see the caption below the plots for why the real SBM instances
+        # are far sparser than this picture.
+        p_in, p_out = 0.5, 0.02
         probs = [[p_in if i == j else p_out for j in range(4)] for i in range(4)]
         return nx.stochastic_block_model(sizes, probs, seed=seed)
     raise ValueError(family)
@@ -172,13 +176,13 @@ Four families, at N = 300 and N = 600 nodes, 3 random seeds each
                 pos = nx.circular_layout(G)
                 nx.draw(G, pos, ax=ax, node_size=30, width=0.5, node_color="tab:blue")
             elif family == "SBM":
-                # Color by block so the modular structure is visible even
-                # when, as here, a few communities end up weakly connected
-                # or disconnected from each other at this small N - that is
-                # not a rendering bug, it reflects the real experiment's SBM
-                # instances, which are intentionally sparse (average degree
-                # below 2, near the percolation threshold - see Limitations)
-                # and are not fully connected either (Section 4).
+                # Color by block so the four communities are visually
+                # obvious. Note p_in is boosted to 0.5 here purely for this
+                # picture (see example_network) - at the real experiment's
+                # p_in=0.02, same-community pairs are mostly NOT connected
+                # (an edge is a 2% roll per pair, not a guarantee), so a
+                # faithful plot would look sparse and scattered, not
+                # visibly clustered like this one.
                 partition = G.graph["partition"]
                 block_of = {}
                 for b, members in enumerate(partition):
@@ -197,11 +201,13 @@ Four families, at N = 300 and N = 600 nodes, 3 random seeds each
     st.caption(
         "WS is drawn with a circular layout to show its ring-lattice origin "
         "(force-directed layout hides it). SBM is colored by community "
-        "block; it can look sparsely connected or even split into separate "
-        "components at this small illustrative N — the real experiment's "
-        "SBM instances are intentionally this sparse (avg degree < 2, near "
-        "the percolation threshold) and are not fully connected either, as "
-        "discussed in the paper's Limitations."
+        "block, with p_in boosted to 0.5 (vs. the real experiment's 0.02) "
+        "purely so the four communities are visibly clustered here — at "
+        "the real p_in, an edge within a community is only a 2% chance per "
+        "pair, not a guarantee, so the actual networks are far sparser and "
+        "less visibly clustered than this picture, and are not fully "
+        "connected either (avg degree < 2, near the percolation threshold, "
+        "as the paper's Limitations section discusses)."
     )
 
     st.subheader("Real networks")
