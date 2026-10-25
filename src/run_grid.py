@@ -1,6 +1,6 @@
 """Full experiment grid: synthetic network families (ER/BA/WS/SBM) across
 sizes and seeds, plus real networks, for both degree- and betweenness-based
-attacks, across all policies (static/adaptive/fixed_k/trigger T1/T2).
+attacks, across all policies (static/adaptive/fixed_k/trigger T1/T2/T3).
 
 Writes one row per (network, centrality, policy, param) to results/grid.csv.
 """
@@ -12,7 +12,7 @@ import pandas as pd
 
 from networks import make_er, make_ba, make_ws, make_sbm
 from real_networks import load_real_networks
-from experiment import run_all_policies, summarize
+from experiment import run_all_policies, summarize, T3_TAU_VALUES, T3_PROBE_K
 
 SYNTH_SIZES = [300, 600]
 SYNTH_SEEDS = [0, 1, 2]
@@ -52,6 +52,7 @@ def main():
             results = run_all_policies(
                 G, centrality_fn=centrality_fn,
                 k_values=K_VALUES, tau_values=TAU_VALUES,
+                t3_tau_values=T3_TAU_VALUES, t3_probe_k=T3_PROBE_K,
                 approx_betweenness_k=approx_k,
                 random_seed=seed if seed is not None else 0,
             )
@@ -69,6 +70,9 @@ def main():
                     "n_recomputations": r["n_recomputations"],
                     "cost_fraction": r["cost_fraction"],
                     "gain_retained": r["gain_retained"],
+                    "score_time": r["score_time"],
+                    "trigger_time": r["trigger_time"],
+                    "work_units": r["work_units"],
                 })
 
     df = pd.DataFrame(rows)
