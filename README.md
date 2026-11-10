@@ -60,7 +60,7 @@ results/                 generated CSVs (gitignored)
 figures/                 generated plots (gitignored)
 ```
 
-## Running it
+## Running it in local  
 
 ```bash
 python3 -m venv .venv
@@ -77,6 +77,8 @@ are downloaded from SNAP (https://snap.stanford.edu/data/) into
 Les Misérables, Florentine families, Davis Southern women) come bundled
 with networkx.
 
+## Deployed Application link  
+[event-triggered-network-dismantling](https://event-triggered-network-dismantling.streamlit.app/)
 ## Reference paper
 
 Wandelt, S., Sun, X., Feng, D., Zanin, M., & Havlin, S. (2018). A
